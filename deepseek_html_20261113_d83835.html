@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decisiones — Escena 1: El Chat</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  #game {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ============ FONDO HABITACIÓN ============ */
+  #room {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 40vw 40vh at 15% 20%, rgba(80,120,200,0.15), transparent 70%),
+      radial-gradient(ellipse 50vw 55vh at 50% 60%, rgba(30,60,90,0.25), transparent 70%),
+      linear-gradient(180deg, #0a0a14 0%, #06060a 60%, #040408 100%);
+    z-index: 0;
+  }
+  #room::before {
+    content: '';
+    position: absolute;
+    left: 5vw; top: 6vh;
+    width: 18vw; height: 28vh;
+    background:
+      radial-gradient(circle 2vw at 65% 30%, rgba(230,240,255,0.85), rgba(180,200,240,0.15) 40%, transparent 70%),
+      linear-gradient(180deg, #1a1f35 0%, #0d1220 100%);
+    border: 0.5vh solid #1a1a24;
+    border-radius: 0.3vw;
+    box-shadow: 0 0 6vw 1vw rgba(120,160,220,0.08), inset 0 0 4vw rgba(0,0,0,0.5);
+  }
+  #room::after {
+    content: '';
+    position: absolute;
+    left: 5vw; top: 6vh;
+    width: 18vw; height: 28vh;
+    background:
+      linear-gradient(90deg, transparent 48%, #1a1a24 48%, #1a1a24 52%, transparent 52%),
+      linear-gradient(180deg, transparent 48%, #1a1a24 48%, #1a1a24 52%, transparent 52%);
+    border-radius: 0.3vw;
+    pointer-events: none;
+  }
+  #room-furniture {
+    position: absolute;
+    right: 4vw; top: 22vh;
+    width: 12vw; height: 55vh;
+    background: linear-gradient(180deg, #0a0a12 0%, #050508 100%);
+    border-radius: 0.3vw;
+    box-shadow: inset 0 0 3vw rgba(0,0,0,0.8);
+    opacity: 0.9;
+    z-index: 0;
+  }
+  #room-furniture::before {
+    content: '';
+    position: absolute;
+    top: 30%; left: 10%; right: 10%; height: 0.4vh;
+    background: #151520;
+    box-shadow: 0 12vh 0 #151520, 0 24vh 0 #151520, 0 36vh 0 #151520;
+  }
+
+  #scene-label {
+    position: fixed;
+    left: 2vh; bottom: 2vh;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(10px, 1.5vh, 14px);
+    letter-spacing: 0.15em;
+    color: rgba(120, 160, 220, 0.4);
+    text-transform: uppercase;
+    z-index: 5;
+    pointer-events: none;
+  }
+  @media (max-width: 800px) { #scene-label { display: none; } }
+
+  /* ============ MÓVIL ============ */
+  #phone {
+    position: relative;
+    width: 30rem;
+    height: 55rem;
+    background: #000;
+    border-radius: 2.75rem;
+    border: 0.5rem solid #14141a;
+    box-shadow:
+      0 0 0 0.15rem #050508,
+      0 0 5rem rgba(80, 140, 200, 0.12),
+      0 2rem 5rem rgba(0,0,0,0.8),
+      inset 0 0 2rem rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  #phone-notch {
+    position: absolute;
+    top: 0.75rem; left: 50%;
+    transform: translateX(-50%);
+    width: 8.125rem; height: 1.75rem;
+    background: #000;
+    border-radius: 1.25rem;
+    z-index: 100;
+    box-shadow: inset 0 0 0.25rem #0a0a0a;
+  }
+
+  /* ============ HEADER ============ */
+  .wa-header {
+    background: #1f2c34;
+    padding: 2.875rem 0.75rem 0.75rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    border-bottom: 1px solid #111a20;
+    flex-shrink: 0;
+    z-index: 20;
+  }
+  .wa-back {
+    width: 1.75rem; height: 1.75rem;
+    color: #aebac1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.1s;
+  }
+  .wa-back:active { transform: scale(0.9); }
+  .wa-back.shake { animation: shake 0.35s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-0.25rem); }
+    75% { transform: translateX(0.25rem); }
+  }
+  .wa-avatar {
+    width: 2.5rem; height: 2.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6b7a8f, #3d4a5c);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    color: #e9edef;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+  }
+  .wa-contact { flex: 1; min-width: 0; }
+  .wa-contact-name {
+    color: #e9edef;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.01em;
+  }
+  .wa-contact-status {
+    color: #8696a0;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    height: 1.05rem;
+    transition: color 0.2s;
+  }
+  .wa-contact-status.typing { color: #53bdeb; }
+  .wa-contact-status .dots span {
+    display: inline-block;
+    animation: dotPulse 1.2s infinite;
+  }
+  .wa-contact-status .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .wa-contact-status .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse {
+    0%, 60%, 100% { opacity: 0.35; }
+    30% { opacity: 1; }
+  }
+  .wa-icons { display: flex; gap: 0.25rem; flex-shrink: 0; }
+  .wa-icon-btn {
+    width: 2.375rem; height: 2.375rem;
+    color: #aebac1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .wa-icon-btn:hover { background: rgba(255,255,255,0.06); }
+  .wa-icon-btn:active { background: rgba(255,255,255,0.1); }
+  .wa-icon-btn svg { width: 1.25rem; height: 1.25rem; }
+
+  /* ============ CHAT ============ */
+  .wa-chat {
+    flex: 1;
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(30,45,55,0.6), transparent 60%),
+      radial-gradient(ellipse at 80% 70%, rgba(25,38,48,0.5), transparent 60%),
+      #0b141a;
+    padding: 1rem 0.75rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    scroll-behavior: smooth;
+  }
+  .wa-chat::-webkit-scrollbar { width: 0.25rem; }
+  .wa-chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 0.125rem; }
+
+  .date-pill { text-align: center; margin: 0.5rem 0 1rem; position: relative; z-index: 1; }
+  .date-pill span {
+    display: inline-block;
+    background: #223039;
+    color: #a6b6bf;
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.5rem;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+  }
+
+  .bubble-row {
+    display: flex;
+    margin-bottom: 0.125rem;
+    position: relative;
+    z-index: 1;
+    animation: bubbleIn 0.25s ease-out;
+  }
+  @keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .bubble-row.in { justify-content: flex-start; }
+  .bubble-row.out { justify-content: flex-end; }
+
+  .bubble {
+    position: relative;
+    max-width: 78%;
+    padding: 0.4375rem 0.6875rem 1.1875rem 0.6875rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #eef2f4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    letter-spacing: 0.005em;
+  }
+  .bubble.in {
+    background: #223039;
+    border-top-left-radius: 0.125rem;
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+  .bubble.out {
+    background: #005c4b;
+    border-top-right-radius: 0.125rem;
+  }
+  .bubble .meta {
+    position: absolute;
+    bottom: 0.3125rem;
+    right: 0.5rem;
+    font-size: 0.75rem;
+    color: rgba(233, 237, 239, 0.65);
+    display: flex;
+    align-items: center;
+    gap: 0.1875rem;
+  }
+  .bubble.out .meta .ticks { color: #53bdeb; }
+
+  .typing-bubble {
+    background: #223039;
+    border-radius: 0.5rem;
+    border-top-left-radius: 0.125rem;
+    padding: 0.8125rem 1.0625rem;
+    display: flex;
+    gap: 0.3125rem;
+    align-items: center;
+    max-width: 78%;
+    animation: bubbleIn 0.25s ease-out;
+  }
+  .typing-bubble span {
+    width: 0.4375rem; height: 0.4375rem;
+    border-radius: 50%;
+    background: #a6b6bf;
+    animation: dotPulse 1.2s infinite;
+  }
+  .typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-bubble span:nth-child(3) { animation-delay: 0.3s; }
+
+  .system-msg { text-align: center; margin: 0.625rem 0; position: relative; z-index: 1; }
+  .system-msg span {
+    display: inline-block;
+    background: rgba(20, 30, 38, 0.9);
+    color: #9eacb4;
+    font-size: 0.75rem;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 0.5rem;
+    font-style: italic;
+  }
+
+  /* ============ CHIPS ============ */
+  .wa-chips {
+    background: #0b141a;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    border-top: 1px solid transparent;
+    flex-shrink: 0;
+  }
+  .wa-chips.active {
+    padding: 0.75rem;
+    max-height: 22rem;
+    border-top-color: #1a242c;
+  }
+  .chip {
+    display: block;
+    width: 100%;
+    background: #223039;
+    border: 1px solid #2f424c;
+    color: #eef2f4;
+    padding: 0.8125rem 1.125rem;
+    border-radius: 1.375rem;
+    font-size: 0.9375rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 0.5rem;
+    font-family: inherit;
+    font-weight: 500;
+    letter-spacing: 0.005em;
+  }
+  .chip:last-child { margin-bottom: 0; }
+  .chip:hover { background: #2d3d47; border-color: #3d525d; }
+  .chip:active { transform: scale(0.98); background: #005c4b; border-color: #005c4b; }
+  .chip.ignorar { color: #a6b6bf; font-style: italic; font-weight: 400; }
+
+  /* ============ INPUT BAR ============ */
+  .wa-input {
+    background: #0b141a;
+    padding: 0.5rem 0.625rem 0.875rem 0.625rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    border-top: 1px solid #1a242c;
+  }
+  .wa-input-box {
+    flex: 1;
+    background: #1f2c34;
+    border-radius: 1.375rem;
+    padding: 0.625rem 1rem;
+    color: #8696a0;
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: not-allowed;
+  }
+  .wa-input-box .placeholder { flex: 1; opacity: 0.7; }
+  .wa-input-box svg { width: 1.25rem; height: 1.25rem; color: #8696a0; flex-shrink: 0; }
+  .wa-mic {
+    width: 2.75rem; height: 2.75rem;
+    background: #00a884;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    cursor: not-allowed;
+    opacity: 0.75;
+  }
+  .wa-mic svg { width: 1.375rem; height: 1.375rem; color: #fff; }
+
+  /* ============ OVERLAYS ============ */
+  .overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(0.25rem);
+    -webkit-backdrop-filter: blur(0.25rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .overlay.active { opacity: 1; pointer-events: auto; }
+
+  #call-overlay {
+    background: linear-gradient(180deg, #0d1418 0%, #0a1014 100%);
+    flex-direction: column;
+    padding: 3.75rem 2.5rem;
+  }
+  .call-avatar {
+    width: 7.5rem; height: 7.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6b7a8f, #3d4a5c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem;
+    color: #e9edef;
+    margin-bottom: 1.875rem;
+    box-shadow: 0 0 2.5rem rgba(83, 189, 235, 0.2);
+    animation: callPulse 2s infinite;
+  }
+  @keyframes callPulse {
+    0%, 100% { box-shadow: 0 0 2.5rem rgba(83, 189, 235, 0.2); }
+    50% { box-shadow: 0 0 3.75rem rgba(83, 189, 235, 0.4); }
+  }
+  .call-name { color: #e9edef; font-size: 1.375rem; font-weight: 500; margin-bottom: 0.625rem; }
+  .call-status { color: #8696a0; font-size: 0.9375rem; margin-bottom: 3.75rem; letter-spacing: 0.03em; }
+  .call-actions { display: flex; gap: 2.5rem; margin-top: auto; }
+  .call-btn {
+    width: 4rem; height: 4rem;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .call-btn:active { transform: scale(0.92); }
+  .call-btn.end { background: #e53935; transform: rotate(135deg); }
+  .call-btn.end svg { width: 1.75rem; height: 1.75rem; color: white; }
+
+  #menu-popup {
+    position: absolute;
+    top: 6.5rem; right: 1.5rem;
+    background: #233138;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0;
+    min-width: 13rem;
+    box-shadow: 0 0.25rem 1.25rem rgba(0,0,0,0.6);
+    z-index: 150;
+    opacity: 0;
+    transform: translateY(-0.5rem);
+    pointer-events: none;
+    transition: all 0.2s;
+  }
+  #menu-popup.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .menu-item {
+    padding: 0.8125rem 1.25rem;
+    color: #e9edef;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .menu-item:hover { background: rgba(255,255,255,0.05); }
+  .menu-item.danger { color: #f15c6d; }
+
+  #block-overlay .modal {
+    background: #233138;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 21.25rem;
+    text-align: center;
+  }
+  .modal-title { color: #e9edef; font-size: 1.125rem; font-weight: 600; margin-bottom: 0.625rem; }
+  .modal-desc { color: #a6b6bf; font-size: 0.875rem; margin-bottom: 1.25rem; line-height: 1.45; }
+  .modal-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+  .modal-btn {
+    padding: 0.8125rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  .modal-btn.cancel { background: transparent; color: #53bdeb; }
+  .modal-btn.cancel:hover { background: rgba(83,189,235,0.1); }
+  .modal-btn.confirm { background: #f15c6d; color: #fff; }
+  .modal-btn.confirm:hover { background: #d94255; }
+
+  #toast {
+    position: absolute;
+    left: 50%; bottom: 5.625rem;
+    transform: translateX(-50%) translateY(1.25rem);
+    background: rgba(35, 49, 56, 0.96);
+    color: #e9edef;
+    padding: 0.6875rem 1.25rem;
+    border-radius: 1.5rem;
+    font-size: 0.875rem;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ============ ENDING ============ */
+  #ending-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, #0a0a14 0%, #000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 400;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  #ending-overlay.active { opacity: 1; pointer-events: auto; }
+  .ending-card {
+    text-align: center;
+    padding: clamp(20px, 4vh, 40px);
+    max-width: min(90vw, 700px);
+    animation: endingFade 1.2s ease-out;
+  }
+  @keyframes endingFade {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .ending-eyebrow {
+    color: #53bdeb;
+    font-size: clamp(11px, 1.5vh, 14px);
+    letter-spacing: 0.4em;
+    margin-bottom: clamp(16px, 3vh, 30px);
+    text-transform: uppercase;
+    font-family: 'Courier New', monospace;
+  }
+  .ending-title {
+    font-size: clamp(36px, 9vh, 82px);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: #e9edef;
+    margin-bottom: clamp(16px, 2.5vh, 24px);
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 40px rgba(83, 189, 235, 0.3);
+  }
+  .ending-title.corta { color: #b8e986; text-shadow: 0 0 40px rgba(184,233,134,0.3); }
+  .ending-title.ceder { color: #f8d76b; text-shadow: 0 0 40px rgba(248,215,107,0.3); }
+  .ending-title.duda  { color: #8696a0; }
+  .ending-title.rompe { color: #f15c6d; text-shadow: 0 0 40px rgba(241,92,109,0.4); }
+  .ending-desc {
+    color: #b0bcc4;
+    font-size: clamp(14px, 2vh, 17px);
+    line-height: 1.65;
+    margin-bottom: clamp(16px, 3vh, 30px);
+    max-width: min(80vw, 560px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .ending-stats {
+    display: inline-block;
+    text-align: left;
+    background: rgba(30, 42, 50, 0.6);
+    border: 1px solid #1a242c;
+    border-radius: 0.5em;
+    padding: clamp(12px, 2vh, 16px) clamp(16px, 2.5vh, 24px);
+    margin-bottom: clamp(16px, 3vh, 30px);
+    color: #a6b6bf;
+    font-size: clamp(12px, 1.7vh, 14px);
+    font-family: 'Courier New', monospace;
+    line-height: 1.8;
+  }
+  .ending-stats .stat-value { color: #e9edef; }
+  .btn-restart {
+    background: #00a884;
+    color: #fff;
+    border: none;
+    padding: 0.85em 2.4em;
+    border-radius: 2em;
+    font-size: clamp(13px, 1.8vh, 15px);
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, transform 0.15s;
+    display: block;
+    margin: 0 auto 1em;
+  }
+  .btn-restart:hover { background: #00c298; }
+  .btn-restart:active { transform: scale(0.98); }
+  .ending-next {
+    color: #4a5761;
+    font-size: clamp(10px, 1.5vh, 12px);
+    letter-spacing: 0.3em;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    margin-top: 1.5em;
+  }
+
+  /* ============ CRT (suavizado) ============ */
+  #crt {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 500;
+    background: repeating-linear-gradient(0deg,
+      rgba(0,0,0,0.04) 0px,
+      rgba(0,0,0,0.04) 1px,
+      transparent 1px,
+      transparent 4px);
+  }
+  #crt::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35) 100%);
+  }
+  #crt::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(120,160,220,0.015) 0%, transparent 40%, transparent 60%, rgba(120,60,60,0.015) 100%);
+    animation: flicker 9s infinite;
+  }
+  @keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.97; } }
+
+  /* ============ PANTALLA DE INICIO ============ */
+  #startup {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, #0a0e18 0%, #000 100%);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+  #startup.active { opacity: 1; pointer-events: auto; }
+
+  .startup-card {
+    text-align: center;
+    padding: clamp(24px, 5vh, 60px);
+    max-width: min(90vw, 720px);
+    position: relative;
+    z-index: 2;
+  }
+  .startup-label {
+    color: #53bdeb;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(11px, 1.6vh, 14px);
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    margin-bottom: clamp(16px, 3vh, 28px);
+    opacity: 0.7;
+  }
+  .startup-title {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(44px, 12vh, 130px);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: #e9edef;
+    line-height: 1;
+    margin-bottom: clamp(14px, 2.5vh, 22px);
+    text-shadow: 0 0 60px rgba(83,189,235,0.25);
+  }
+  .startup-sub {
+    color: #8696a0;
+    font-size: clamp(13px, 1.9vh, 16px);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-bottom: clamp(28px, 5vh, 50px);
+    font-family: 'Courier New', monospace;
+  }
+  .startup-desc {
+    color: #b0bcc4;
+    font-size: clamp(14px, 2vh, 17px);
+    line-height: 1.6;
+    max-width: min(80vw, 500px);
+    margin: 0 auto clamp(28px, 5vh, 50px);
+  }
+  .btn-fullscreen {
+    background: #00a884;
+    color: #fff;
+    border: none;
+    padding: 1em 2.6em;
+    border-radius: 2em;
+    font-size: clamp(14px, 2vh, 17px);
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+    box-shadow: 0 0 0 0 rgba(0,168,132,0);
+    animation: btnPulse 2.4s infinite;
+  }
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.3); }
+    50%      { box-shadow: 0 0 0 0.75em rgba(0,168,132,0); }
+  }
+  .btn-fullscreen:hover { background: #00c298; }
+  .btn-fullscreen:active { transform: scale(0.98); }
+  .btn-fullscreen svg { width: 1.1em; height: 1.1em; }
+
+  .startup-hint {
+    color: #4a5761;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(11px, 1.5vh, 13px);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: clamp(20px, 3vh, 32px);
+  }
+  .startup-hint kbd {
+    display: inline-block;
+    background: #1a242c;
+    border: 1px solid #2a3942;
+    border-bottom-width: 2px;
+    padding: 0.2em 0.55em;
+    border-radius: 0.3em;
+    color: #a6b6bf;
+    font-family: 'Courier New', monospace;
+    font-size: 1em;
+  }
+
+  .startup-fallback {
+    margin-top: clamp(20px, 3vh, 32px);
+    color: #5a6770;
+    font-size: clamp(11px, 1.5vh, 12px);
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+  }
+  .startup-fallback:hover { color: #8696a0; }
+
+  /* decoración esquinas */
+  .startup-card::before,
+  .startup-card::after {
+    content: '';
+    position: absolute;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(83,189,235,0.25);
+  }
+  .startup-card::before {
+    top: 0; left: 0;
+    border-right: none; border-bottom: none;
+  }
+  .startup-card::after {
+    bottom: 0; right: 0;
+    border-left: none; border-top: none;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="room"></div>
+  <div id="room-furniture"></div>
+  <div id="scene-label">ESCENA 01 · EL CHAT</div>
+
+  <div id="phone">
+    <div id="phone-notch"></div>
+
+    <div class="wa-header">
+      <div class="wa-back" id="btn-back" title="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </div>
+      <div class="wa-avatar">K</div>
+      <div class="wa-contact">
+        <div class="wa-contact-name">Kevin</div>
+        <div class="wa-contact-status" id="wa-status">en línea</div>
+      </div>
+      <div class="wa-icons">
+        <div class="wa-icon-btn" title="Videollamada">
+          <svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
+        </div>
+        <div class="wa-icon-btn" id="btn-call" title="Llamar">
+          <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z" fill="currentColor"/></svg>
+        </div>
+        <div class="wa-icon-btn" id="btn-menu" title="Menú">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="wa-chat" id="wa-chat">
+      <div class="date-pill"><span>HOY</span></div>
+    </div>
+
+    <div class="wa-chips" id="wa-chips"></div>
+
+    <div class="wa-input">
+      <div class="wa-input-box">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/><path d="M8 14c1 1.5 2.5 2 4 2s3-.5 4-2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        <span class="placeholder">Mensaje</span>
+        <svg viewBox="0 0 24 24"><path d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5L10.5 17.5a2 2 0 0 1-3-3L15 7" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      </div>
+      <div class="wa-mic">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <div id="menu-popup">
+      <div class="menu-item" data-action="contact">Ver contacto</div>
+      <div class="menu-item" data-action="mute">Silenciar notificaciones</div>
+      <div class="menu-item" data-action="call">Llamar</div>
+      <div class="menu-item danger" data-action="block">Bloquear contacto</div>
+      <div class="menu-item" data-action="clear">Vaciar chat</div>
+    </div>
+
+    <div class="overlay" id="call-overlay">
+      <div class="call-avatar">K</div>
+      <div class="call-name">Kevin</div>
+      <div class="call-status" id="call-status">Llamando…</div>
+      <div class="call-actions">
+        <div class="call-btn end">
+          <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z" fill="currentColor"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="block-overlay">
+      <div class="modal">
+        <div class="modal-title">¿Bloquear a Kevin?</div>
+        <div class="modal-desc">Las personas bloqueadas ya no podrán llamarte ni enviarte mensajes.</div>
+        <div class="modal-actions">
+          <button class="modal-btn cancel" id="block-cancel">Cancelar</button>
+          <button class="modal-btn confirm" id="block-confirm">Bloquear</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+
+  <div id="ending-overlay">
+    <div class="ending-card">
+      <div class="ending-eyebrow">FINAL DESBLOQUEADO</div>
+      <div class="ending-title" id="ending-title">—</div>
+      <div class="ending-desc" id="ending-desc">—</div>
+      <div class="ending-stats" id="ending-stats"></div>
+      <button class="btn-restart" id="btn-restart">↻ REINICIAR</button>
+      <div class="ending-next">ESCENA 02 — PRÓXIMAMENTE</div>
+    </div>
+  </div>
+
+  <div id="crt"></div>
+
+  <!-- PANTALLA DE INICIO / PAUSA -->
+  <div id="startup" class="active">
+    <div class="startup-card">
+      <div class="startup-label">UNA HISTORIA INTERACTIVA</div>
+      <div class="startup-title" id="startup-title">DECISIONES</div>
+      <div class="startup-sub" id="startup-sub">ESCENA 01 · EL CHAT</div>
+      <div class="startup-desc" id="startup-desc">
+        Este juego está pensado para jugarse en pantalla completa.<br>
+        Entra en pantalla completa para empezar.
+      </div>
+      <button class="btn-fullscreen" id="btn-fs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+        <span id="btn-fs-label">ENTRAR EN PANTALLA COMPLETA</span>
+      </button>
+      <div class="startup-hint">O presiona <kbd>F11</kbd> en tu teclado</div>
+      <button class="startup-fallback" id="btn-skip">Continuar sin pantalla completa</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* ============================================================
+   ESCALADO ADAPTATIVO
+   Base: 480×880 px → 30rem × 55rem
+   ============================================================ */
+function fitPhone() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let scale = Math.min((vh * 0.98) / 880, (vw * 0.96) / 480);
+  scale = Math.min(scale, 1.5);
+  const floor = 14 / 16; // piso: root nunca menor a 14px
+  if (scale < floor) {
+    const fitsH = (vh * 0.98) / 880 >= floor;
+    const fitsW = (vw * 0.96) / 480 >= floor;
+    if (fitsH && fitsW) scale = floor;
+  }
+  document.documentElement.style.fontSize = (16 * scale) + 'px';
+}
+window.addEventListener('resize', fitPhone);
+window.addEventListener('orientationchange', fitPhone);
+fitPhone();
+
+/* ============================================================
+   TIEMPO
+   ============================================================ */
+let timeH = 22, timeM = 47;
+function nextTime() {
+  const t = `${timeH}:${String(timeM).padStart(2,'0')}`;
+  timeM++;
+  if (timeM >= 60) { timeM = 0; timeH = (timeH + 1) % 24; }
+  return t;
+}
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+const state = {
+  llamadas: 0,
+  asertividad: 0,
+  ceder: 0,
+  ignorar: 0,
+  bloqueado: false,
+  busy: false,
+  currentChips: [],
+  currentNodeId: null,
+  ended: false,
+  started: false,
+};
+
+/* ============================================================
+   GRAFO NARRATIVO
+   ============================================================ */
+const nodes = {
+  start: {
+    messages: [
+      { text: 'oe', delay: 700 },
+      { text: 'estas ahi?', delay: 1200 },
+    ],
+    chips: [
+      { label: '¿qué pasa?', next: 'invite' },
+      { label: 'ya, dime', next: 'invite' },
+      { label: '(no responder)', next: 'silent_1', flags: { ignorar: 1 }, ignorar: true },
+    ],
+  },
+  invite: {
+    messages: [
+      { text: 'nada, hay una fiesta hoy', delay: 1100 },
+      { text: 'en la casa de un pata en Surco', delay: 900 },
+      { text: 'te apuntas?', delay: 900 },
+    ],
+    chips: [
+      { label: '¿quién va?', next: 'who_goes' },
+      { label: 'no puedo hoy', next: 'pressure_1' },
+      { label: 'mmm no sé…', next: 'hesitant' },
+    ],
+  },
+  who_goes: {
+    messages: [
+      { text: 'los de siempre', delay: 900 },
+      { text: 'y va Mara 👀', delay: 1100 },
+      { text: 'dale, no seas aburrido', delay: 900 },
+    ],
+    chips: [
+      { label: 'y qué me importa Mara', next: 'pressure_1', flags: { asertividad: 1 } },
+      { label: 'bueno, tal vez', next: 'hesitant', flags: { ceder: 1 } },
+      { label: 'en serio no puedo', next: 'pressure_1' },
+    ],
+  },
+  hesitant: {
+    messages: [
+      { text: 'oee', delay: 600 },
+      { text: 'no seas así', delay: 800 },
+      { text: 'siempre te quedas en tu casa', delay: 1000 },
+      { text: 'una noche no te va a matar', delay: 900 },
+    ],
+    chips: [
+      { label: 'ya, está bien, voy', next: 'accepted', flags: { ceder: 1 } },
+      { label: 'no, hoy no', next: 'pressure_2', flags: { asertividad: 1 } },
+      { label: '(ignorar)', next: 'silent_2', flags: { ignorar: 1 }, ignorar: true },
+    ],
+  },
+  pressure_1: {
+    messages: [
+      { text: '¿por qué no?', delay: 700 },
+      { text: 'no me digas que vas a estudiar', delay: 900 },
+      { text: 'aburrido', delay: 700 },
+    ],
+    chips: [
+      { label: 'estoy cansado', next: 'pressure_2' },
+      { label: 'mis papás no me dejan', next: 'pressure_2' },
+      { label: 'ok, voy', next: 'accepted', flags: { ceder: 1 } },
+    ],
+  },
+  pressure_2: {
+    messages: [
+      { text: 'ya pues causa', delay: 700 },
+      { text: 'si no vas te vas a arrepentir', delay: 1000 },
+      { text: 'todos van a estar ahí', delay: 900 },
+      { text: 'y tú en tu cuarto, como siempre', delay: 1100 },
+    ],
+    chips: [
+      { label: 'ya, ya, voy', next: 'accepted', flags: { ceder: 1 } },
+      { label: 'no. en serio, no.', next: 'firm_no', flags: { asertividad: 2 } },
+    ],
+  },
+  silent_1: {
+    messages: [
+      { text: 'oe?', delay: 1500 },
+      { text: 'por qué me ignoras', delay: 1200 },
+      { text: 'sabes que odio eso', delay: 900 },
+    ],
+    chips: [
+      { label: 'perdón, me distraje', next: 'invite' },
+      { label: '(seguir ignorando)', next: 'silent_2', flags: { ignorar: 1 }, ignorar: true },
+    ],
+  },
+  silent_2: {
+    messages: [
+      { text: '...', delay: 2000 },
+      { text: 'ya, ok', delay: 1500 },
+      { text: 'después no digas que no te invité', delay: 2000 },
+    ],
+    chips: [
+      { label: 'espera…', next: 'pressure_2' },
+      { label: '(no decir nada)', next: 'final_duda', ignorar: true },
+    ],
+  },
+  accepted: {
+    messages: [
+      { text: '¡eso!', delay: 600 },
+      { text: 'te paso a buscar a las 10', delay: 900 },
+      { text: 'ponte guapo', delay: 800 },
+    ],
+    chips: [
+      { label: 'dale', next: 'final_ceder' },
+      { label: 'espera…', next: 'pressure_2' },
+    ],
+  },
+  firm_no: {
+    messages: [
+      { text: 'ya', delay: 1100 },
+      { text: 'como quieras', delay: 1200 },
+    ],
+    chips: [
+      { label: 'ok', next: 'final_corta' },
+    ],
+  },
+  final_ceder: { ending: 'ceder' },
+  final_corta: { ending: 'corta' },
+  final_duda:  { ending: 'duda' },
+  final_rompe: { ending: 'rompe' },
+};
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const chatEl = $('wa-chat');
+function scrollChat() { chatEl.scrollTop = chatEl.scrollHeight; }
+
+function addMessage(from, text, opts = {}) {
+  const row = document.createElement('div');
+  row.className = 'bubble-row ' + from;
+
+  if (opts.system) {
+    const sys = document.createElement('div');
+    sys.className = 'system-msg';
+    sys.innerHTML = `<span>${text}</span>`;
+    chatEl.appendChild(sys);
+    scrollChat();
+    return row;
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ' + from;
+
+  const textEl = document.createElement('span');
+  textEl.className = 'text';
+  textEl.textContent = text;
+  bubble.appendChild(textEl);
+
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  meta.innerHTML = `<span>${nextTime()}</span>`;
+  if (from === 'out') {
+    meta.innerHTML += `<span class="ticks">✓✓</span>`;
+    bubble.classList.add('read');
+  }
+  bubble.appendChild(meta);
+  row.appendChild(bubble);
+  chatEl.appendChild(row);
+  scrollChat();
+  return row;
+}
+
+let typingEl = null;
+async function showTyping(show) {
+  const status = $('wa-status');
+  if (show) {
+    status.innerHTML = 'escribiendo<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+    status.classList.add('typing');
+    if (!typingEl) {
+      typingEl = document.createElement('div');
+      typingEl.className = 'typing-bubble';
+      typingEl.innerHTML = '<span></span><span></span><span></span>';
+      typingEl.style.marginBottom = '0.375rem';
+      chatEl.appendChild(typingEl);
+      scrollChat();
+    }
+  } else {
+    status.textContent = 'en línea';
+    status.classList.remove('typing');
+    if (typingEl) { typingEl.remove(); typingEl = null; }
+  }
+}
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
+const chipsEl = $('wa-chips');
+function renderChips(chips) {
+  state.currentChips = chips;
+  chipsEl.innerHTML = '';
+  if (!chips || chips.length === 0) { chipsEl.classList.remove('active'); return; }
+  chips.forEach(chip => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (chip.ignorar ? ' ignorar' : '');
+    btn.textContent = chip.label;
+    btn.addEventListener('click', () => selectChip(chip));
+    chipsEl.appendChild(btn);
+  });
+  chipsEl.classList.add('active');
+  setTimeout(scrollChat, 50);
+}
+function hideChips() { chipsEl.classList.remove('active'); }
+
+/* ============================================================
+   FLUJO
+   ============================================================ */
+async function playNode(nodeId) {
+  if (state.busy || state.ended) return;
+  const node = nodes[nodeId];
+  if (!node) return;
+
+  state.currentNodeId = nodeId;
+  state.busy = true;
+  hideChips();
+
+  if (node.flags) applyFlags(node.flags);
+
+  if (node.messages) {
+    for (const msg of node.messages) {
+      await showTyping(true);
+      await sleep(msg.delay || 900);
+      await showTyping(false);
+      addMessage('in', msg.text);
+      await sleep(220);
+    }
+  }
+
+  if (node.ending) { state.busy = false; return triggerEnding(node.ending); }
+  if (node.chips) { state.busy = false; renderChips(node.chips); return; }
+  state.busy = false;
+}
+
+function applyFlags(flags) {
+  for (const [k, v] of Object.entries(flags)) {
+    state[k] = (state[k] || 0) + v;
+  }
+}
+
+async function selectChip(chip) {
+  if (state.busy || state.ended) return;
+  state.busy = true;
+  hideChips();
+
+  addMessage('out', chip.label);
+  if (chip.flags) applyFlags(chip.flags);
+
+  await sleep(700);
+  const lastOut = chatEl.querySelector('.bubble-row.out:last-child .ticks');
+  if (lastOut) lastOut.style.color = '#53bdeb';
+
+  await sleep(400);
+  state.busy = false;
+  playNode(chip.next);
+}
+
+/* ============================================================
+   LLAMADA
+   ============================================================ */
+async function doCall() {
+  if (state.busy || state.ended) return;
+  state.busy = true;
+  hideChips();
+
+  const overlay = $('call-overlay');
+  const status = $('call-status');
+  overlay.classList.add('active');
+
+  status.textContent = 'Llamando…';
+  await sleep(2200);
+  status.textContent = 'Llamando…';
+  await sleep(1800);
+  status.textContent = 'Colgó';
+  await sleep(1400);
+
+  overlay.classList.remove('active');
+  state.llamadas++;
+  await sleep(600);
+
+  let reaction;
+  if (state.llamadas === 1) reaction = '¿qué demonios te pasa?!';
+  else if (state.llamadas === 2) reaction = 'jajaja oe ¿qué acaba de pasar? 😭';
+  else if (state.llamadas === 3) reaction = 'si me vuelves a llamar, te bloqueo yo a ti';
+  else reaction = '…';
+
+  await showTyping(true);
+  await sleep(1400);
+  await showTyping(false);
+  addMessage('in', reaction);
+  await sleep(400);
+
+  state.busy = false;
+  if (state.currentChips && state.currentChips.length) {
+    renderChips(state.currentChips);
+  }
+}
+
+/* ============================================================
+   MENÚ
+   ============================================================ */
+const menuPopup = $('menu-popup');
+function toggleMenu(show) {
+  if (show === undefined) show = !menuPopup.classList.contains('active');
+  menuPopup.classList.toggle('active', show);
+}
+$('btn-menu').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+document.addEventListener('click', () => toggleMenu(false));
+menuPopup.addEventListener('click', (e) => e.stopPropagation());
+
+menuPopup.querySelectorAll('.menu-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const action = item.dataset.action;
+    toggleMenu(false);
+    handleMenuAction(action);
+  });
+});
+
+function handleMenuAction(action) {
+  if (state.ended) return;
+  switch (action) {
+    case 'contact': showToast('Próximamente'); break;
+    case 'mute':    showToast('Notificaciones silenciadas'); break;
+    case 'clear':   showToast('Chat vaciado (visualmente)'); break;
+    case 'call':    doCall(); break;
+    case 'block':   $('block-overlay').classList.add('active'); break;
+  }
+}
+
+$('block-cancel').addEventListener('click', () => $('block-overlay').classList.remove('active'));
+$('block-confirm').addEventListener('click', () => {
+  $('block-overlay').classList.remove('active');
+  state.bloqueado = true;
+  triggerEnding('corta', true);
+});
+
+$('btn-call').addEventListener('click', doCall);
+$('btn-back').addEventListener('click', () => {
+  const b = $('btn-back');
+  b.classList.add('shake');
+  setTimeout(() => b.classList.remove('shake'), 400);
+  showToast('No puedes salir del chat');
+});
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimeout;
+function showToast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ============================================================
+   ENDINGS
+   ============================================================ */
+const endingData = {
+  ceder: { title: 'EL QUE CEDE', desc: 'Cediste otra vez. No es la primera y probablemente no será la última. Kevin sabe exactamente qué botón apretar, y tú ya ni siquiera te das cuenta cuando lo hace.' },
+  corta: { title: 'EL QUE CORTA', desc: 'Pusiste un límite. Duele, incomoda, y por un momento te preguntarás si exageraste. No exageraste. Cortar no es dejar de querer a alguien: es dejar de permitirle que te use.' },
+  duda:  { title: 'EL QUE DUDA',  desc: 'No dijiste ni sí ni no. No cortaste ni aceptaste. Y a veces eso también es una respuesta: la de dejar que otros decidan por ti. La noche sigue, y tú sigues en tu cuarto.' },
+  rompe: { title: 'EL QUE SE ROMPE', desc: 'Llamaste demasiadas veces. Cediste demasiado. En algún punto entre el primer mensaje y la última llamada, dejaste de ser quien eras. Kevin no lo notó. Pero tú sí.' },
+};
+
+function triggerEnding(type, viaBlock = false) {
+  if (state.ended) return;
+  state.ended = true;
+  hideChips();
+
+  if (type === 'ceder' && state.llamadas >= 3) type = 'rompe';
+
+  const data = endingData[type];
+  const overlay = $('ending-overlay');
+  const titleEl = $('ending-title');
+  const descEl = $('ending-desc');
+  const statsEl = $('ending-stats');
+
+  titleEl.textContent = data.title;
+  titleEl.className = 'ending-title ' + type;
+
+  let desc = data.desc;
+  if (viaBlock) desc = 'Lo bloqueaste. El chat se cortó de golpe. No hay vuelta atrás en esto, pero sí en el alivio que sientes. ' + desc;
+  descEl.textContent = desc;
+
+  statsEl.innerHTML = `
+    <div>› llamadas hechas: <span class="stat-value">${state.llamadas}</span></div>
+    <div>› veces que cediste: <span class="stat-value">${state.ceder}</span></div>
+    <div>› veces que fuiste firme: <span class="stat-value">${state.asertividad}</span></div>
+    <div>› veces que ignoraste: <span class="stat-value">${state.ignorar}</span></div>
+  `;
+
+  overlay.classList.add('active');
+}
+
+$('btn-restart').addEventListener('click', () => location.reload());
+
+/* ============================================================
+   PANTALLA COMPLETA
+   ============================================================ */
+function isLikelyFullscreen() {
+  if (document.fullscreenElement) return true;
+  if (window.matchMedia('(display-mode: fullscreen)').matches) return true;
+  const dx = Math.abs(window.innerWidth - screen.availWidth);
+  const dy = Math.abs(window.innerHeight - screen.availHeight);
+  return dx <= 3 && dy <= 3;
+}
+
+async function enterFullscreenAndStart() {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch (e) { /* si el navegador lo bloquea, seguimos igual */ }
+  startGame();
+}
+
+function startGame() {
+  if (state.started) return;
+  state.started = true;
+  $('startup').classList.remove('active');
+  setTimeout(() => playNode('start'), 500);
+}
+
+function pauseToStartup() {
+  if (!state.started) return;
+  const title = $('startup-title');
+  const sub = $('startup-sub');
+  const desc = $('startup-desc');
+  const label = $('btn-fs-label');
+
+  title.textContent = 'PAUSA';
+  sub.textContent = 'SALISTE DE PANTALLA COMPLETA';
+  desc.innerHTML = 'La historia está pausada.<br>Vuelve a pantalla completa para continuar.';
+  label.textContent = 'REANUDAR';
+  $('startup').classList.add('active');
+}
+
+$('btn-fs').addEventListener('click', enterFullscreenAndStart);
+
+$('btn-skip').addEventListener('click', () => {
+  // fallback: el navegador no permite fullscreen, jugamos igual
+  startGame();
+});
+
+// Detectar cambios de fullscreen
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && state.started) {
+    pauseToStartup();
+  }
+});
+
+// Detectar F11 y cambios de tamaño bruscos
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const fs = isLikelyFullscreen();
+    if (!state.started && fs) {
+      startGame();
+    } else if (state.started && !fs) {
+      pauseToStartup();
+    }
+  }, 350);
+});
+
+// Atajo de teclado: Enter/Space en la pantalla de inicio = entrar
+document.addEventListener('keydown', (e) => {
+  if (!state.started && $('startup').classList.contains('active')) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      enterFullscreenAndStart();
+    }
+  }
+});
+
+// Si ya estamos en fullscreen (por PWA o por haber recargado estando en FS), arrancar
+if (isLikelyFullscreen()) {
+  startGame();
+}
+</script>
+</body>
+</html>
